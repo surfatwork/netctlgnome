@@ -1,8 +1,11 @@
 /*
- * Netctl Menu is a Gnome 3 extension that allows you to  switch between netctl
+ * Netctl Menu is a Gnome 3 extension that allows you to switch between netctl
  * profiles using a menu in the notification area.
+
+ * This version has been tested with Gnome version 3.12
  *
- * Copyright (C) 2013  Tjaart van der Walt
+ * Author: Pradeep Murthy (prmurthy ****at**** yahoo ****dot **** com)
+ * This was originally based on an applet by Tjaart van der Walt
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,8 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const version = 2.0
-//const Applet = imports.ui.applet;
+const version = 3.0
 const GLib = imports.gi.GLib;
 const Lang = imports.lang;
 const Main = imports.ui.main;
@@ -42,6 +44,7 @@ const NETWORK_WL_CONNECTED_2 = "network-wireless-signal-ok-symbolic";
 const NETWORK_WL_CONNECTED_3 = "network-wireless-signal-good-symbolic";
 const NETWORK_WL_CONNECTED_4 = "network-wireless-signal-excellent-symbolic";
 
+// Variables
 let indicator;
 let event = null;
 let iface;
@@ -49,9 +52,6 @@ let wl_contype;
 let enet_static_iface;
 let wl_static_iface;
 
-/*
- *
- */
 function Netctl() {
     this._init.apply(this, arguments);
 }
@@ -79,20 +79,27 @@ function close_async(pid) {
 
 Netctl.prototype = {
     __proto__: PanelMenu.Button.prototype,
+    // above changed from PanelMenu.SystemStatusButton for 3.12 compatibility
+    // This means that this will not work with older Gnome versions
+    // For older versions, change this to PanelMenu.SystemStatusButton.prototype
 
     _init: function(){
         PanelMenu.Button.prototype._init.call(this, 0.0, 'netctl', false);
+        // Alignment (0.0) and menu parameter (false) added for compatibility with newer gnome versions
+        // This means that this will not work with older Gnome versions
+        // For older version, change this to ....call(this, 'netctl')
+        
         // We include the set_icon() and update_menu() becaust otherwise the
         // icon will only appear after the timeout on refresh_details() have passed
         this._update_menu();
         this._set_icon();
 
-        // Will keep on updating the status area icon and updating the menu every x seconds
+        // Will keep updating the status area icon and updating the menu every x seconds
         this._refresh_details();
     },
 
     _get_interface: function () {
-        // gets the currently active interface. returns the active interface name if any
+    // gets the currently active interface. returns the active interface name if any
 
         let check_interface_exists = GLib.spawn_command_line_sync("ip route list")[1].toString();
 
@@ -109,9 +116,9 @@ Netctl.prototype = {
     },
 
     _get_static_interface: function () {
-        // gets the names of the network devices in the system. sets the global variables wl_static_interface and enet_static_interface
-        // we are assuming that there is only 1 wireless and ethernet interface each, and the interface names start with w and e respectively
-        // If there are more than one interface each, the last interface will be the static interface selected
+    // gets the names of the network devices in the system. sets the global variables wl_static_interface and enet_static_interface
+    // we are assuming that there is only 1 wireless and ethernet interface each, and the interface names start with w and e respectively
+    // If there is more than one interface each, the last interface will be the static interface selected
 
         let ifacelist = GLib.spawn_command_line_sync("ls /sys/class/net").toString();
         all_iface = ifacelist.split("\n", 3);
@@ -126,8 +133,8 @@ Netctl.prototype = {
     },
 
     _get_connected_networks: function () {
-        // finds out the name of the network we are connected to, and how
-        // returns the connection type (Ethernet, Auto, Manual), Name of the connected wireless network if any, and signal quality as a 2digit decimal
+    // finds out the name of the network we are connected to, and how
+    // returns the connection type (Ethernet, Auto, Manual), Name of the connected wireless network if any, and signal quality as a 2digit decimal
 
         if (iface == "") {
             return [wl_contype, "None", 0];
@@ -165,7 +172,7 @@ Netctl.prototype = {
     },
 
     _set_icon: function () {
-        // Sets the systray icon and the tooltip text, after getting data from _get_connected_networks
+    // Sets the systray icon and the tooltip text, after getting data from _get_connected_networks
 
         let icon_name = "";
         let networkname = this._get_connected_networks();
@@ -199,7 +206,6 @@ Netctl.prototype = {
             }
         }
 
-//        this.set_applet_tooltip(tooltiptext);
         let statusIcon = new St.Icon({
             icon_name: icon_name,
             icon_size: 16
@@ -212,8 +218,8 @@ Netctl.prototype = {
     },
 
     _get_network_profiles: function () {
-        // gets the list of netctl profiles
-        // returns an array of profile names
+    // gets the list of netctl profiles
+    // returns an array of profile names
 
         var profileString = GLib.spawn_command_line_sync("netctl list")[1].toString();
         var profileArray = profileString.split("\n")
@@ -221,7 +227,7 @@ Netctl.prototype = {
     },
 
     _switch_to_profile: function (newprofileName) {
-        // switches to selected manual profile. Not used for switching to auto profile because netctl switch-to doesnt work for switching from manual profile to auto
+    // switches to selected manual profile. Not used for switching to auto profile because netctl switch-to doesnt work for switching from manual profile to auto
 
         let _wl_contype = wl_contype;
         let oldprofile = this._get_connected_networks();
@@ -247,9 +253,9 @@ Netctl.prototype = {
     },
 
     _switch_back_on_failure: function (contype, oldprofileName, newprofileName) {
-        // checks if the switch to a new profile worked. If it didnt, switches back to old profile. calls _get_connected_networks to update variables. updates the menu
-
-        // if iface is set to null by _get_interface, it means we arent connected any more. The switch failed, so need to switch back
+    // checks if the switch to a new profile worked. If it didnt, switches back to old profile. calls _get_connected_networks to update variables. updates the menu
+    // if iface is set to null by _get_interface, it means we arent connected any more. The switch failed, so need to switch back
+    
         iface = this._get_interface();
         this._get_connected_networks();
 
@@ -285,8 +291,8 @@ Netctl.prototype = {
     },
 
     _auto_wl_connect: function () {
-        // switches to the wireless auto profile. first switches off any active manual profiles.
-        // we are assuming that this always works
+    // switches to the wireless auto profile. first switches off any active manual profiles.
+    // we are assuming that this always works
 
         let profileName = this._get_connected_networks();
         let msg = "Switching to auto. Please enter your password";
@@ -316,7 +322,7 @@ Netctl.prototype = {
 	
 
     _add_profile_menu_item: function (profile) {
-        // adds profiles to the menu. provides click action for inactive profiles      
+    // adds profiles to the menu. provides click action for inactive profiles      
 
         if (!profile.match(/\*.*/g)) {
             let menuItem = new PopupMenu.PopupMenuItem(profile);
@@ -332,7 +338,7 @@ Netctl.prototype = {
     },
 
     _update_menu: function () {
-        // creates the menu
+    // creates the menu
 
         this.menu.removeAll();
         iface = this._get_interface();
@@ -350,19 +356,15 @@ Netctl.prototype = {
     },
 
     _refresh_details: function () {
-        // refreshes the menu and icons/tooltip text
+    // refreshes the menu and icons/tooltip text
 
         event = GLib.timeout_add_seconds(0, 5, Lang.bind(this, function () {
             this._update_menu();
             this._set_icon();
             return true;
         }));
-//    },
 
-//    on_applet_clicked: function (event) {
-//        this.menu.toggle();
     }
-
 }
 
 function init() {
